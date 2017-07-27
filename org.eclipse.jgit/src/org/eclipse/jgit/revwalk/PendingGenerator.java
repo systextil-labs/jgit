@@ -131,7 +131,7 @@ class PendingGenerator extends Generator {
 					return null;
 				}
 
-				final boolean produce;
+				boolean produce;
 				if ((c.flags & UNINTERESTING) != 0)
 					produce = false;
 				else {
@@ -143,10 +143,16 @@ class PendingGenerator extends Generator {
 				for (final RevCommit p : c.parents) {
 					if ((p.flags & SEEN) != 0)
 						continue;
-					if ((p.flags & PARSED) == 0)
-						p.parseHeaders(walker);
-					p.flags |= SEEN;
-					pending.add(p);
+                    try {
+                        if ((p.flags & PARSED) == 0)
+                            p.parseHeaders(walker);
+                        pending.add(p);
+                    } catch(MissingObjectException moe) {
+                        System.err.println("Ignoring "+c.getName()+" because of: "+moe.getMessage());
+                        produce = false;
+                    } finally {
+                        p.flags |= SEEN;
+                    }
 				}
 				walker.carryFlagsImpl(c);
 
